@@ -1,6 +1,15 @@
+. "libraries\New-IsoFile.ps1"
+. "libraries\Test-PSRemoting.ps1"
+
+#VARIABLES
 $vm = "Server2012R2"
 $vmLocation = "$($home)\VirtualBox VMs\$($vm)"
 $iso = "./9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO"
+$guestAdditionsISO = "C:\Program Files\Oracle\VirtualBox\VBoxGuestAdditions.iso"
+$Timeout = 600
+$CheckEvery = 10
+$username = "vagrant"
+$password = "vagrant"
 
 #nuke the vm if it exists
 #should probably try to catch this error and do something slick or check to see if the vm exists before deleting
@@ -34,3 +43,44 @@ VBoxManage modifyvm $vm --memory 2048 --vram 48 --cpus 2 --natpf1 "guest_winrm,t
 
 #start the vm
 vboxmanage startvm $vm
+
+#Start the timer
+$timer = [Diagnostics.Stopwatch]::StartNew()
+
+$password = $password | ConvertTo-SecureString -AsPlainText -Force
+$cred = New-Object -Typename System.Management.Automation.PSCredential -argumentlist $username, $password
+
+#Wait until WinRM is available
+Write-Host "Waiting until WinRM is available..."
+while (-not (Test-PSRemoting -ComputerName localhost -Port 55985 -Credential $cred))
+{
+    Write-Verbose -Message "Waiting for [$($ComputerName)] to become pingable..."
+    ## If the timer has waited greater than or equal to the timeout, throw an exception exiting the loop
+    if ($timer.Elapsed.TotalSeconds -ge $Timeout)
+    {
+       throw "Timeout exceeded. Giving up machine being ready."
+    }
+    ## Stop the loop every $CheckEvery seconds
+    Start-Sleep -Seconds $CheckEvery
+}
+Write-Host "WinRM is available. Continuing..."
+
+<#
+
+Write-Host "Mounting and Installing VirtulBox Guest Additions..."
+#unmount iso (windows dvd)
+VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 --medium emptydrive
+
+#mount guest additions
+VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 --type dvddrive --medium $guestAdditionsISO
+
+#install guest additions
+Invoke-Command -ComputerName Localhost -Port 55985 -Credential $cred -ScriptBlock { certutil -addstore -f "TrustedPublisher" A:\oraclesha256.cer; certutil -addstore -f "TrustedPublisher" A:\oracle.cer; d:\VBoxWindowsAdditions.exe /S }
+
+#unmount iso vbox guest additions
+VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 --medium emptydrive
+
+#stop the vm
+vboxmanage controlvm $vm savestate
+
+#>
