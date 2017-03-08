@@ -25,18 +25,6 @@ Set-ItemProperty -Path $pageFileMemoryKey -Name PagingFiles -Value ""
 
 if(Test-PendingReboot){ Invoke-Reboot }
 
-#install VirtualBox Additions
-if(Test-Path "d:/VBoxWindowsAdditions.exe") {
-    Write-Host "Installing Guest Additions"
-    certutil -addstore -f "TrustedPublisher" A:\oraclesha256.cer
-	certutil -addstore -f "TrustedPublisher" A:\oracle.cer
-
-    mkdir "C:\Windows\Temp\virtualbox" -ErrorAction SilentlyContinue
-    Start-Process -FilePath "d:/VBoxWindowsAdditions.exe" -ArgumentList "/S" -WorkingDirectory "C:\Windows\Temp\virtualbox" -Wait
-
-    Remove-Item C:\Windows\Temp\virtualbox -Recurse -Force
-}
-
 Write-BoxstarterMessage "Setting up winrm"
 netsh advfirewall firewall add rule name="WinRM-HTTP" dir=in localport=5985 protocol=TCP action=allow
 

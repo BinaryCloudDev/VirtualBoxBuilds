@@ -65,8 +65,6 @@ while (-not (Test-PSRemoting -ComputerName localhost -Port 55985 -Credential $cr
 }
 Write-Host "WinRM is available. Continuing..."
 
-<#
-
 Write-Host "Mounting and Installing VirtulBox Guest Additions..."
 #unmount iso (windows dvd)
 VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 --medium emptydrive
@@ -74,13 +72,16 @@ VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 -
 #mount guest additions
 VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 --type dvddrive --medium $guestAdditionsISO
 
-#install guest additions
-Invoke-Command -ComputerName Localhost -Port 55985 -Credential $cred -ScriptBlock { certutil -addstore -f "TrustedPublisher" A:\oraclesha256.cer; certutil -addstore -f "TrustedPublisher" A:\oracle.cer; d:\VBoxWindowsAdditions.exe /S }
+#do a bunch of other stuff
+Write-Host "Provisioning a bunch of stuff..."
+Invoke-Command -ComputerName Localhost -Port 55985 -Credential $cred -ScriptBlock { A:\provision.ps1 }
 
-#unmount iso vbox guest additions
+#unmount iso vbox guest additions and floppy
 VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 --medium emptydrive
 
-#stop the vm
-vboxmanage controlvm $vm savestate
+#sysprep VM
+Write-Host "Sysprepping the vm..."
+Invoke-Command -ComputerName Localhost -Port 55985 -Credential $cred -ScriptBlock { A:\PackerShutdown.bat }
 
-#>
+Write-Host "Ejecting the floppy drive..."
+VBoxManage storageattach $vm --storagectl "Floppy" --port 0 --device 0 --type fdd --medium emptydrive

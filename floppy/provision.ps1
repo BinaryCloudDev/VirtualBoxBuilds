@@ -4,16 +4,14 @@ $ErrorActionPreference = "Stop"
 Write-Host "Enabling file sharing firewall rules"
 netsh advfirewall firewall set rule group="File and Printer Sharing" new enable=yes
 
-$iso = Mount-DiskImage -ImagePath c:\Users\vagrant\VBoxGuestAdditions.iso -PassThru
-$driveLetter = ($iso | Get-Volume).DriveLetter
-
-if(Test-Path "$($driveLetter):/VBoxWindowsAdditions.exe") {
+#install VirtualBox Additions
+if(Test-Path "d:/VBoxWindowsAdditions.exe") {
     Write-Host "Installing Guest Additions"
     certutil -addstore -f "TrustedPublisher" A:\oraclesha256.cer
 	certutil -addstore -f "TrustedPublisher" A:\oracle.cer
 
     mkdir "C:\Windows\Temp\virtualbox" -ErrorAction SilentlyContinue
-    Start-Process -FilePath "$($driveLetter):/VBoxWindowsAdditions.exe" -ArgumentList "/S" -WorkingDirectory "C:\Windows\Temp\virtualbox" -Wait
+    Start-Process -FilePath "d:/VBoxWindowsAdditions.exe" -ArgumentList "/S" -WorkingDirectory "C:\Windows\Temp\virtualbox" -Wait
 
     Remove-Item C:\Windows\Temp\virtualbox -Recurse -Force
 }
