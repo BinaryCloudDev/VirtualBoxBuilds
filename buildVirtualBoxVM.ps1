@@ -11,6 +11,10 @@ $CheckEvery = 10
 $username = "vagrant"
 $password = "vagrant"
 
+#delete and recreate the output directory
+Remove-Item ./output -Recurse -Force -ErrorAction SilentlyContinue
+mkdir ./output
+
 #nuke the vm if it exists
 #should probably try to catch this error and do something slick or check to see if the vm exists before deleting
 VBoxManage unregistervm $vm --delete
@@ -19,11 +23,12 @@ Remove-Item $vmLocation -ErrorAction SilentlyContinue -Recurse -Confirm:$false -
 VBoxManage createvm --name $vm --ostype WindowsNT_64 --register
 
 #create a hard drive, 20GB, dynamic allocation
-VBoxManage createhd --filename "$($vmLocation)\$vm" --size 20480 --format VDI
+$disk = VBoxManage createhd --filename "$($vmLocation)\$vm" --size 20480 --format VMDK
+$uuid = $disk -replace "Medium created. UUID: ", ""
 
 #add a sata controller with the dynamic disk
 VBoxManage storagectl $vm --name "SATA Controller" --add sata --controller IntelAHCI
-VBoxManage storageattach $vm --storagectl "SATA Controller" --port 0 --device 0 --type hdd --medium "$($vmLocation)\$($vm).vdi"
+VBoxManage storageattach $vm --storagectl "SATA Controller" --port 0 --device 0 --type hdd --medium "$($vmLocation)\$($vm).vmdk"
 
 #add an ide controller with dvd drive and install iso
 VBoxManage storagectl $vm --name "IDE Controller" --add ide
@@ -81,7 +86,10 @@ VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 -
 
 #sysprep VM
 Write-Host "Sysprepping the vm..."
-Invoke-Command -ComputerName Localhost -Port 55985 -Credential $cred -ScriptBlock { A:\PackerShutdown.bat }
+Invoke-Command -ComputerName Localhost -Port 55985 -Credential $cred -ScriptBlock { A:\PackerShutdown.bat } -ErrorAction SilentlyContinue
 
 Write-Host "Ejecting the floppy drive..."
 VBoxManage storageattach $vm --storagectl "Floppy" --port 0 --device 0 --type fdd --medium emptydrive
+
+Write-Host "Exporting the VM to the output directory..."
+vboxmanage export Server2012R2 --output output/box.ovf --ovf20

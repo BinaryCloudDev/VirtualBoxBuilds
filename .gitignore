@@ -1,2 +1,4 @@
 *.iso
 *.img
+*.ovf
+output/*
