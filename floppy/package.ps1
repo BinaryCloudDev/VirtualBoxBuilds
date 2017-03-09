@@ -38,6 +38,7 @@ try {
 catch {
   $global:error.RemoveAt(0)
 }
+
 Enable-PSRemoting @enableArgs
 Enable-WSManCredSSP -Force -Role Server
 winrm set winrm/config/client/auth '@{Basic="true"}'

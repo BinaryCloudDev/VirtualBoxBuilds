@@ -17,7 +17,7 @@ mkdir ./output
 
 #nuke the vm if it exists
 #should probably try to catch this error and do something slick or check to see if the vm exists before deleting
-VBoxManage unregistervm $vm --delete
+$null = VBoxManage unregistervm $vm --delete 2>&1
 Remove-Item $vmLocation -ErrorAction SilentlyContinue -Recurse -Confirm:$false -Force
 
 VBoxManage createvm --name $vm --ostype WindowsNT_64 --register
