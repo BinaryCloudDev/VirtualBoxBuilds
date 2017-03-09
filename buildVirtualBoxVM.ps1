@@ -10,20 +10,23 @@ $Timeout = 600
 $CheckEvery = 10
 $username = "vagrant"
 $password = "vagrant"
+$headless = $false
 
 #delete and recreate the output directory
 Remove-Item ./output -Recurse -Force -ErrorAction SilentlyContinue
-mkdir ./output
+mkdir ./output | Out-Null
 
 #nuke the vm if it exists
 #should probably try to catch this error and do something slick or check to see if the vm exists before deleting
 $null = VBoxManage unregistervm $vm --delete 2>&1
 Remove-Item $vmLocation -ErrorAction SilentlyContinue -Recurse -Confirm:$false -Force
 
-VBoxManage createvm --name $vm --ostype WindowsNT_64 --register
+#create the vm
+Write-Host "Creating the VM $($vm)..."
+$machine = VBoxManage createvm --name $vm --ostype WindowsNT_64 --register 2>&1
 
 #create a hard drive, 20GB, dynamic allocation
-$disk = VBoxManage createhd --filename "$($vmLocation)\$vm" --size 20480 --format VMDK
+$disk = VBoxManage createhd --filename "$($vmLocation)\$vm" --size 20480 --format VMDK 2>&1
 $uuid = $disk -replace "Medium created. UUID: ", ""
 
 #add a sata controller with the dynamic disk
@@ -47,7 +50,12 @@ VBoxManage modifyvm $vm --boot1 dvd --boot2 disk
 VBoxManage modifyvm $vm --memory 2048 --vram 48 --cpus 2 --natpf1 "guest_winrm,tcp,127.0.0.1,55985,,5985"
 
 #start the vm
-vboxmanage startvm $vm
+Write-Host "Starting the VM..."
+if ($headless) {
+   $null = vboxmanage startvm $vm headless 2>&1
+} else {
+   $null = vboxmanage startvm $vm 2>&1
+}
 
 #Start the timer
 $timer = [Diagnostics.Stopwatch]::StartNew()
@@ -79,7 +87,7 @@ VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 -
 
 #do a bunch of other stuff
 Write-Host "Provisioning a bunch of stuff..."
-Invoke-Command -ComputerName Localhost -Port 55985 -Credential $cred -ScriptBlock { A:\provision.ps1 }
+$output = Invoke-Command -ComputerName Localhost -Port 55985 -Credential $cred -ScriptBlock { A:\provision.ps1 }
 
 #unmount iso vbox guest additions and floppy
 VBoxManage storageattach $vm --storagectl "IDE Controller" --port 0 --device 0 --medium emptydrive
@@ -92,4 +100,6 @@ Write-Host "Ejecting the floppy drive..."
 VBoxManage storageattach $vm --storagectl "Floppy" --port 0 --device 0 --type fdd --medium emptydrive
 
 Write-Host "Exporting the VM to the output directory..."
-vboxmanage export Server2012R2 --output output/box.ovf --ovf20
+$null = vboxmanage export Server2012R2 --output output/box.ovf --ovf20 2>&1
+
+Write-Host "Done!"

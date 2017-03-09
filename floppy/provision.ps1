@@ -1,12 +1,12 @@
 $ErrorActionPreference = "Stop"
 . a:\Test-Command.ps1
 
-Write-Host "Enabling file sharing firewall rules"
+Write-Host "Enabling file sharing firewall rules..."
 netsh advfirewall firewall set rule group="File and Printer Sharing" new enable=yes
 
 #install VirtualBox Additions
 if(Test-Path "d:/VBoxWindowsAdditions.exe") {
-    Write-Host "Installing Guest Additions"
+    Write-Host "Installing Guest Additions..."
     certutil -addstore -f "TrustedPublisher" A:\oraclesha256.cer
 	certutil -addstore -f "TrustedPublisher" A:\oracle.cer
 
@@ -28,7 +28,6 @@ Write-Host "Cleaning SxS..."
     "$env:windir\winsxs\manifestcache"
 ) | % {
         if(Test-Path $_) {
-            Write-Host "Removing $_"
             try {
               Takeown /d Y /R /f $_
               Icacls $_ /GRANT:r administrators:F /T /c /q  2>&1 | Out-Null
@@ -37,7 +36,7 @@ Write-Host "Cleaning SxS..."
         }
     }
 
-Write-Host "defragging..."
+Write-Host "Defragging..."
 if (Test-Command -cmdname 'Optimize-Volume') {
     Optimize-Volume -DriveLetter C
     } else {
@@ -68,14 +67,14 @@ finally {
  
 Del $FilePath
 
-Write-Host "copying auto unattend file"
+Write-Host "Copying auto unattend file..."
 mkdir C:\Windows\setup\scripts
 copy-item a:\SetupComplete-2012.cmd C:\Windows\setup\scripts\SetupComplete.cmd -Force
 
 mkdir C:\Windows\Panther\Unattend
 copy-item a:\postunattend.xml C:\Windows\Panther\Unattend\unattend.xml
 
-Write-Host "Recreate pagefile after sysprep"
+Write-Host "Recreate pagefile after sysprep..."
 $System = GWMI Win32_ComputerSystem -EnableAllPrivileges
 if ($system -ne $null) {
   $System.AutomaticManagedPagefile = $true
